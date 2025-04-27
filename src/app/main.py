@@ -7,9 +7,39 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 # Caminhos
-raw = './data/raw'
-processed = './data/processed'
-os.makedirs(processed, exist_ok=True)
+raw_folder = './data/raw'
+preprocessed_folder = './data/preprocessed'
+#processed_folder = './data/processed'
+
+
+os.makedirs(raw_folder, exist_ok=True)
+os.makedirs(preprocessed_folder, exist_ok=True)
+#os.makedirs(processed_folder, exist_ok=True)
+
+class WordFileHandler(FileSystemEventHandler):
+    """
+    Uma classe handler para monitorar e processar arquivos Word (.docx) recém-criados em um diretório.
+
+    Métodos:
+    on_created(event):
+        Acionado quando um novo arquivo ou diretório é criado. Se o arquivo criado for um documento Word
+        (.docx), aguarda brevemente para garantir que o arquivo foi completamente escrito e então processa o documento.
+
+    Args: 
+        event (FileSystemEvent):
+        O evento de sistema de arquivos que contém informações sobre o arquivo ou diretório criado.
+    """
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith('.docx'):
+            time.sleep(1)  # Pequeno atraso para garantir que o arquivo foi completamente escrito
+            processar_documento(event.src_path)
+
+class CSVFileHandler(FileSystemEventHandler):
+    """
+    Future:
+    Une os arquivos CSV em um único arquivo CSV.
+    """
+    pass
 
 
 def extrair_tabelas_com_python_docx(caminho):
@@ -36,7 +66,7 @@ def extrair_tabelas_com_python_docx(caminho):
 
 
 
-def salvar_tabelas_em_csv(tabelas, nome_arquivo_base, metodo):
+def salvar_tabelas_em_csv(tabelas, nome_arquivo_base):
     """
     Salva uma lista de DataFrames em arquivos CSV.
 
@@ -53,8 +83,8 @@ def salvar_tabelas_em_csv(tabelas, nome_arquivo_base, metodo):
         None
     """
     for i, df in enumerate(tabelas):
-        nome_tabela = f"{nome_arquivo_base}_tabela_{i+1}_{metodo}.csv"
-        caminho_saida = os.path.join(processed, nome_tabela)
+        nome_tabela = f"{nome_arquivo_base}_tabela_{i+1}.csv"
+        caminho_saida = os.path.join(preprocessed_folder, nome_tabela)
         df.to_csv(caminho_saida, index=False)
 
 
@@ -68,28 +98,10 @@ def processar_documento(caminho):
     arquivo = os.path.basename(caminho)
     nome_base = os.path.splitext(arquivo)[0]
     tabelas_docx = extrair_tabelas_com_python_docx(caminho)
-    salvar_tabelas_em_csv(tabelas_docx, nome_base, 'python_docx')
+    salvar_tabelas_em_csv(tabelas_docx, nome_base)
     print(f"\nNovo arquivo processado: {arquivo}")
-    print(f"Aguardando novos arquivos na pasta: {raw}")
+    print(f"Aguardando novos arquivos na pasta: {raw_folder}")
 
-
-class WordFileHandler(FileSystemEventHandler):
-    """
-    Uma classe handler para monitorar e processar arquivos Word (.docx) recém-criados em um diretório.
-
-    Métodos:
-    on_created(event):
-        Acionado quando um novo arquivo ou diretório é criado. Se o arquivo criado for um documento Word
-        (.docx), aguarda brevemente para garantir que o arquivo foi completamente escrito e então processa o documento.
-
-    Args: 
-        event (FileSystemEvent):
-        O evento de sistema de arquivos que contém informações sobre o arquivo ou diretório criado.
-    """
-    def on_created(self, event):
-        if not event.is_directory and event.src_path.endswith('.docx'):
-            time.sleep(1)  # Pequeno atraso para garantir que o arquivo foi completamente escrito
-            processar_documento(event.src_path)
 
 
 def iniciar_monitoramento(pasta):
@@ -118,6 +130,5 @@ def iniciar_monitoramento(pasta):
 
 
 if __name__ == '__main__':
-    os.makedirs(raw, exist_ok=True)
-    iniciar_monitoramento(raw)
+    iniciar_monitoramento(raw_folder)
     
