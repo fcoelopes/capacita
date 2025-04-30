@@ -10,9 +10,10 @@ raw_folder = './data/raw'
 preprocessed_folder = './data/preprocessed'
 processed_folder = './data/processed'
 
-os.makedirs(raw_folder, exist_ok=True)
-os.makedirs(preprocessed_folder, exist_ok=True)
-os.makedirs(processed_folder, exist_ok=True)
+paths = [raw_folder, preprocessed_folder, processed_folder]
+for path in paths:
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 class WordFileHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -36,11 +37,11 @@ def extrair_conteudo(caminho):
             table = [t for t in doc.tables if t._tbl == tbl]
             if table:
                 # Extrair os dados da tabela como lista de listas
-                tabela = []
+                temp_table = []
                 for row in table[0].rows:
                     linha = [cell.text.strip() for cell in row.cells]
-                    tabela.append(linha)
-                df = pd.DataFrame(tabela)
+                    temp_table.append(linha)
+                df = pd.DataFrame(temp_table)
                 if not df.empty:
                     df.columns = df.iloc[0] # Definindo a primeira linha como cabeçalho
                     df = df[1:].reset_index(drop=True) # Removendo a primeira linha que agora é o cabeçalho
@@ -50,16 +51,12 @@ def extrair_conteudo(caminho):
 
 def salvar_tabelas_em_csv(tabelas, nome_arquivo_base, metodo):
     for i, df in enumerate(tabelas):
-        nome_tabela = f"{nome_arquivo_base}_tabela_{i+1}_{metodo}.csv"
-        caminho_saida = os.path.join(preprocessed_folder, nome_tabela)
-        df.to_csv(caminho_saida, index=False)
+        filename = f"{nome_arquivo_base}_tabela_{i+1}_{metodo}.csv"
+        preprocessed_path = os.path.join(preprocessed_folder, filename)
+        df.to_csv(preprocessed_path, index=False)
 
 def salvar_textos_em_txt(textos, nome_arquivo_base):
-    nome_texto = f"{nome_arquivo_base}_texto.txt"
-    caminho_saida = os.path.join(preprocessed_folder, nome_texto)
-    with open(caminho_saida, 'w', encoding='utf-8') as f:
-        for texto in textos:
-            f.write(texto + '\n')
+    pass
 
 def processar_documento(caminho):
     arquivo = os.path.basename(caminho)
@@ -93,16 +90,16 @@ def unir_arquivos_csv(pasta):
     else:
         print("Nenhum arquivo CSV encontrado para unir.")
 
-def iniciar_monitoramento(pasta):
+def iniciar_monitoramento():
     observer_raw = Observer()
-    observer_raw.schedule(WordFileHandler(), path=pasta, recursive=True)
+    observer_raw.schedule(WordFileHandler(), path=raw_folder, recursive=True)
     observer_raw.start()
 
     observer_preprocessed = Observer()
     observer_preprocessed.schedule(CSVFileHandler(), path=preprocessed_folder, recursive=True)
     observer_preprocessed.start()
 
-    print(f"Monitorando pastas: {pasta}, {preprocessed_folder}")
+    print(f"Monitorando pastas: {raw_folder}, {preprocessed_folder}")
     print("Pressione Ctrl+C para parar o monitoramento.")
 
     try:
@@ -116,4 +113,4 @@ def iniciar_monitoramento(pasta):
 
 
 if __name__ == '__main__':
-    iniciar_monitoramento(raw_folder)
+    iniciar_monitoramento()
